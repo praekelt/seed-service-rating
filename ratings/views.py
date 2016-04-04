@@ -25,6 +25,8 @@ class InviteViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
     queryset = Invite.objects.all()
     serializer_class = InviteSerializer
+    filter_fields = ('identity', 'version', 'invited', 'completed',
+                     'expired', 'expires_at', 'created_at', 'updated_at')
 
     # TODO make this work in test harness, works in production
     # def perform_create(self, serializer):
@@ -43,6 +45,8 @@ class RatingViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
     queryset = Rating.objects.all()
     serializer_class = RatingSerializer
+    filter_fields = ('identity', 'invite', 'version', 'question_id',
+                     'created_at')
 
     # TODO make this work in test harness, works in production
     # def perform_create(self, serializer):

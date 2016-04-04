@@ -19,9 +19,9 @@ class APITestCase(TestCase):
 
 class AuthenticatedAPITestCase(APITestCase):
 
-    def make_invite(self):
+    def make_invite(self, identity="210ac8c7-1f23-46af-a186-2468c89f7cc1"):
         data = {
-            "identity": "210ac8c7-1f23-46af-a186-2468c89f7cc1",
+            "identity": identity,
             "invite": {
                 "to_addr": "+27123",
                 "content": "Please dial *120*1234# and rate our service",
@@ -94,6 +94,70 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(d.expired, False)
         self.assertEqual(d.version, 1)
         self.assertEqual(d.expires_at, None)
+
+    def test_read_invite_list_model_data(self):
+        # Setup
+        self.make_invite(
+            identity="210ac8c7-1f23-46af-a186-2468c89f7cc1")
+        self.make_invite(
+            identity="ea7069c7-6e6d-48fd-a839-d41b13d3a54a")
+        self.make_invite(
+            identity="48630fb3-862d-4974-8e69-ac3ee7b0e88e")
+
+        # Execute
+        response = self.client.get('/api/v1/invite/',
+                                   content_type='application/json')
+        results = response.json()
+
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(results["count"], 3)
+        self.assertEqual(len(results["results"]), 3)
+
+    def test_read_invite_list_filtered_model_data(self):
+        # Setup
+        self.make_invite(
+            identity="210ac8c7-1f23-46af-a186-2468c89f7cc1")
+        self.make_invite(
+            identity="ea7069c7-6e6d-48fd-a839-d41b13d3a54a")
+        self.make_invite(
+            identity="48630fb3-862d-4974-8e69-ac3ee7b0e88e")
+
+        # Execute
+        response = self.client.get('/api/v1/invite/?identity=%s' % (
+            "210ac8c7-1f23-46af-a186-2468c89f7cc1",),
+            content_type='application/json')
+        results = response.json()
+
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(results["count"], 1)
+        self.assertEqual(len(results["results"]), 1)
+
+    def test_read_invite_list_filtered_completed_model_data(self):
+        # Setup
+        invite = self.make_invite(
+            identity="210ac8c7-1f23-46af-a186-2468c89f7cc1")
+        invite.completed = True
+        invite.save()
+        self.make_invite(
+            identity="210ac8c7-1f23-46af-a186-2468c89f7cc1")
+        self.make_invite(
+            identity="ea7069c7-6e6d-48fd-a839-d41b13d3a54a")
+        self.make_invite(
+            identity="48630fb3-862d-4974-8e69-ac3ee7b0e88e")
+
+        # Execute
+        response = self.client.get(
+            "/api/v1/invite/?identity=%s&completed=False" % (
+                "210ac8c7-1f23-46af-a186-2468c89f7cc1",),
+            content_type='application/json')
+        results = response.json()
+
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(results["count"], 1)
+        self.assertEqual(len(results["results"]), 1)
 
     def test_create_rating_model_data(self):
         invite = self.make_invite()
