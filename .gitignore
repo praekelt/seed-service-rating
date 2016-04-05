@@ -40,7 +40,7 @@ logs/*.log
 *.pid
 local_settings.py
 .DS_Store
-=======
+
 # Distribution / packaging
 .Python
 env/

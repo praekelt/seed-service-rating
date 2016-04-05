@@ -1,4 +1,4 @@
-from service_rating.settings import *  # flake8: noqa
+from seed_service_rating.settings import *  # flake8: noqa
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'TESTSEKRET'

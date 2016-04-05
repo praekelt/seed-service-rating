@@ -11,4 +11,4 @@ install:
   - "pip install -r requirements-dev.txt --use-wheel"
 script:
   - flake8 .
-  - py.test --ds=service_rating.testsettings */tests.py
+  - py.test --ds=seed_service_rating.testsettings */tests.py

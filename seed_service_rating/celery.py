@@ -7,9 +7,9 @@ from celery import Celery
 from django.conf import settings
 
 # set the default Django settings module for the 'celery' program.
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'service_rating.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'seed_service_rating.settings')
 
-app = Celery('service_rating')
+app = Celery('seed_service_rating')
 
 # Using a string here means the worker will not have to
 # pickle the object when using Windows.

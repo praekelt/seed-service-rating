@@ -1,5 +1,5 @@
 """
-Django settings for service_rating project.
+Django settings for seed_service_rating project.
 
 For more information on this file, see
 https://docs.djangoproject.com/en/1.9/topics/settings/
@@ -63,9 +63,9 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
-ROOT_URLCONF = 'service_rating.urls'
+ROOT_URLCONF = 'seed_service_rating.urls'
 
-WSGI_APPLICATION = 'service_rating.wsgi.application'
+WSGI_APPLICATION = 'seed_service_rating.wsgi.application'
 
 
 # Database
@@ -75,7 +75,7 @@ DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get(
             'SERVICE_RATING_DATABASE',
-            'postgres://postgres:@localhost/service_rating')),
+            'postgres://postgres:@localhost/seed_service_rating')),
 }
 
 
@@ -147,11 +147,11 @@ CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
 
 BROKER_URL = os.environ.get('BROKER_URL', 'redis://localhost:6379/0')
 
-CELERY_DEFAULT_QUEUE = 'service_rating'
+CELERY_DEFAULT_QUEUE = 'seed_service_rating'
 CELERY_QUEUES = (
-    Queue('service_rating',
-          Exchange('service_rating'),
-          routing_key='service_rating'),
+    Queue('seed_service_rating',
+          Exchange('seed_service_rating'),
+          routing_key='seed_service_rating'),
 )
 
 CELERY_ALWAYS_EAGER = False
