@@ -179,3 +179,21 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['json']
 
 djcelery.setup_loader()
+
+TOTAL_INVITES_TO_SEND = int(os.environ.get('TOTAL_INVITES_TO_SEND', '2'))
+
+DAYS_BETWEEN_INVITES = int(os.environ.get('DAYS_BETWEEN_INVITES', '7'))
+
+# Will also parse a list, eg. 'momconnect_prebirth, momconnect_postbirth'
+INVITE_REG_TYPES = [reg_type.strip() for reg_type in os.environ.get(
+    'INVITE_REG_TYPES', 'momconnect_prebirth').split(',')]
+
+# Will also parse a list, eg. 'hw_full, hw_partial'
+INVITE_AUTH_LEVEL = [auth_level.strip() for auth_level in os.environ.get(
+    'INVITE_AUTH_LEVEL', 'hw_full').split(',')]
+
+INVITE_TEXT = os.environ.get(
+    'INVITE_TEXT',
+    'Thank you for registering. We can only improve if we get your feedback. '
+    'Please dial *134*550*4# to rate the service you received at the clinic '
+    'you registered at')
