@@ -45,6 +45,7 @@ INSTALLED_APPS = (
     # documentation
     'rest_framework_docs',
     # 3rd party
+    'djcelery',
     'raven.contrib.django.raven_compat',
     'rest_framework',
     'rest_framework.authtoken',
