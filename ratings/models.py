@@ -20,6 +20,8 @@ class Invite(models.Model):
     completed = models.BooleanField(default=False)
     expired = models.BooleanField(default=False)
     invite = JSONField(null=True, blank=True)
+    invites_sent = models.IntegerField(default=0)
+    send_after = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     expires_at = models.DateTimeField(null=True, blank=True)
