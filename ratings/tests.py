@@ -92,8 +92,12 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(d.invited, False)
         self.assertEqual(d.completed, False)
         self.assertEqual(d.expired, False)
+        self.assertEqual(d.invites_sent, 0)
+        self.assertEqual(d.send_after, None)
         self.assertEqual(d.version, 1)
         self.assertEqual(d.expires_at, None)
+        self.assertEqual(d.created_by, self.user)
+        self.assertEqual(d.updated_by, self.user)
 
     def test_read_invite_list_model_data(self):
         # Setup
@@ -184,6 +188,8 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(d.question_text, "What is the moon made from?")
         self.assertEqual(d.answer_text, "Cheese")
         self.assertEqual(d.answer_value, "cheese")
+        self.assertEqual(d.created_by, self.user)
+        self.assertEqual(d.updated_by, self.user)
 
     def test_create_webhook(self):
         # Setup

@@ -1,7 +1,7 @@
-from .models import Invite, Rating
 from rest_hooks.models import Hook
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+from .models import Invite, Rating
 from .serializers import (InviteSerializer, RatingSerializer, HookSerializer)
 
 
@@ -28,13 +28,12 @@ class InviteViewSet(viewsets.ModelViewSet):
     filter_fields = ('identity', 'version', 'invited', 'completed',
                      'expired', 'expires_at', 'created_at', 'updated_at')
 
-    # TODO make this work in test harness, works in production
-    # def perform_create(self, serializer):
-    #     serializer.save(created_by=self.request.user,
-    #                     updated_by=self.request.user)
-    #
-    # def perform_update(self, serializer):
-    #     serializer.save(updated_by=self.request.user)
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user,
+                        updated_by=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)
 
 
 class RatingViewSet(viewsets.ModelViewSet):
@@ -48,10 +47,9 @@ class RatingViewSet(viewsets.ModelViewSet):
     filter_fields = ('identity', 'invite', 'version', 'question_id',
                      'created_at')
 
-    # TODO make this work in test harness, works in production
-    # def perform_create(self, serializer):
-    #     serializer.save(created_by=self.request.user,
-    #                     updated_by=self.request.user)
-    #
-    # def perform_update(self, serializer):
-    #     serializer.save(updated_by=self.request.user)
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user,
+                        updated_by=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)
