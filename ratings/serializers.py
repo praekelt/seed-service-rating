@@ -22,6 +22,10 @@ class RatingSerializer(serializers.ModelSerializer):
                   'question_text', 'answer_text', 'answer_value', 'created_at')
 
 
+class CreateUserSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
 class HookSerializer(serializers.ModelSerializer):
 
     class Meta:
