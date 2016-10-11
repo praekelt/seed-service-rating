@@ -20,7 +20,7 @@ class HookViewSet(viewsets.ModelViewSet):
 class InviteViewSet(viewsets.ModelViewSet):
 
     """
-    API endpoint that allows dummy models to be viewed or edited.
+    API endpoint that allows invite models to be viewed or edited.
     """
     permission_classes = (IsAuthenticated,)
     queryset = Invite.objects.all()
@@ -39,7 +39,7 @@ class InviteViewSet(viewsets.ModelViewSet):
 class RatingViewSet(viewsets.ModelViewSet):
 
     """
-    API endpoint that allows dummy models to be viewed or edited.
+    API endpoint that allows rating models to be viewed or edited.
     """
     permission_classes = (IsAuthenticated,)
     queryset = Rating.objects.all()

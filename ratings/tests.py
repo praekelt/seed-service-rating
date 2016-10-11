@@ -26,9 +26,29 @@ class AuthenticatedAPITestCase(APITestCase):
                 "to_addr": "+27123",
                 "content": "Please dial *120*1234# and rate our service",
                 "metadata": {}
-            }
+            },
+            "created_by": self.user,
+            "updated_by": self.user
         }
         return Invite.objects.create(**data)
+
+    def make_rating(self, invite,
+                    identity="210ac8c7-1f23-46af-a186-2468c89f7cc1",
+                    version=1, question_id=1,
+                    question_text="What is the moon made from",
+                    answer_text="Cheese", answer_value="cheese"):
+        data = {
+            "identity": identity,
+            "invite": invite,
+            "version": version,
+            "question_id": question_id,
+            "question_text": question_text,
+            "answer_text": answer_text,
+            "answer_value": answer_value,
+            "created_by": self.user,
+            "updated_by": self.user
+        }
+        return Rating.objects.create(**data)
 
     def setUp(self):
         super(AuthenticatedAPITestCase, self).setUp()
@@ -67,7 +87,8 @@ class TestRatingApp(AuthenticatedAPITestCase):
                          "Status code on /api/token-auth was %s -should be 200"
                          % request.status_code)
 
-    def test_create_invite_model_data(self):
+    # Test Invite API
+    def test_create_invite(self):
         post_data = {
             "identity": "210ac8c7-1f23-46af-a186-2468c89f7cc1",
             "invite": {
@@ -99,7 +120,7 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(d.created_by, self.user)
         self.assertEqual(d.updated_by, self.user)
 
-    def test_read_invite_list_model_data(self):
+    def test_get_invite_list(self):
         # Setup
         self.make_invite(
             identity="210ac8c7-1f23-46af-a186-2468c89f7cc1")
@@ -118,7 +139,7 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(results["count"], 3)
         self.assertEqual(len(results["results"]), 3)
 
-    def test_read_invite_list_filtered_model_data(self):
+    def test_get_invite_list_filtered(self):
         # Setup
         self.make_invite(
             identity="210ac8c7-1f23-46af-a186-2468c89f7cc1")
@@ -128,8 +149,9 @@ class TestRatingApp(AuthenticatedAPITestCase):
             identity="48630fb3-862d-4974-8e69-ac3ee7b0e88e")
 
         # Execute
-        response = self.client.get('/api/v1/invite/?identity=%s' % (
-            "210ac8c7-1f23-46af-a186-2468c89f7cc1",),
+        response = self.client.get(
+            '/api/v1/invite/',
+            {'identity': "210ac8c7-1f23-46af-a186-2468c89f7cc1"},
             content_type='application/json')
         results = response.json()
 
@@ -138,7 +160,7 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(results["count"], 1)
         self.assertEqual(len(results["results"]), 1)
 
-    def test_read_invite_list_filtered_completed_model_data(self):
+    def test_get_invite_list_filtered_completed(self):
         # Setup
         invite = self.make_invite(
             identity="210ac8c7-1f23-46af-a186-2468c89f7cc1")
@@ -153,8 +175,9 @@ class TestRatingApp(AuthenticatedAPITestCase):
 
         # Execute
         response = self.client.get(
-            "/api/v1/invite/?identity=%s&completed=False" % (
-                "210ac8c7-1f23-46af-a186-2468c89f7cc1",),
+            '/api/v1/invite/',
+            {'identity': "210ac8c7-1f23-46af-a186-2468c89f7cc1",
+             'completed': False},
             content_type='application/json')
         results = response.json()
 
@@ -163,7 +186,40 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(results["count"], 1)
         self.assertEqual(len(results["results"]), 1)
 
-    def test_create_rating_model_data(self):
+    def test_update_invite(self):
+        # Setup
+        invite = self.make_invite()
+        self.assertEqual(invite.invited, False)
+        self.assertEqual(invite.completed, False)
+        patch_data = {
+            "invited": True
+        }
+        # Execute
+        # use adminclient to make the patch request
+        response = self.adminclient.patch('/api/v1/invite/%s/' % invite.id,
+                                          json.dumps(patch_data),
+                                          content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        invite.refresh_from_db()
+        self.assertEqual(invite.invited, True)
+        self.assertEqual(invite.completed, False)
+        self.assertEqual(invite.created_by, self.user)
+        self.assertEqual(invite.updated_by, self.adminuser)
+
+    def test_delete_invite(self):
+        # Setup
+        invite = self.make_invite()
+        self.assertEqual(Invite.objects.all().count(), 1)
+        # Execute
+        response = self.client.delete('/api/v1/invite/%s/' % invite.id,
+                                      content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Invite.objects.all().count(), 0)
+
+    # Test Rating API
+    def test_create_rating(self):
         invite = self.make_invite()
         post_data = {
             "identity": "210ac8c7-1f23-46af-a186-2468c89f7cc1",
@@ -191,6 +247,98 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(d.created_by, self.user)
         self.assertEqual(d.updated_by, self.user)
 
+    def test_get_rating(self):
+        # Setup
+        invite = self.make_invite()
+        rating = self.make_rating(invite)
+        # Execute
+        response = self.client.get('/api/v1/rating/%s/' % str(rating.id),
+                                   content_type='application/json')
+        result = response.json()
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(result["id"], str(rating.id))
+        self.assertEqual(result["invite"], str(invite.id))
+
+    def test_get_rating_list(self):
+        # Setup
+        invite = self.make_invite()
+        self.make_rating(invite)
+        self.make_rating(invite, question_id=2,
+                         question_text="What jumped over the moon?",
+                         answer_text="A cow", answer_value="cow")
+        # Execute
+        response = self.client.get('/api/v1/rating/',
+                                   content_type='application/json')
+        results = response.json()
+
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(results["count"], 2)
+        self.assertEqual(len(results["results"]), 2)
+
+    def test_get_rating_list_filtered(self):
+        # Setup
+        invite = self.make_invite()
+        self.make_rating(invite)
+        self.make_rating(invite, question_id=2,
+                         question_text="What jumped over the moon?",
+                         answer_text="A cow", answer_value="cow")
+        self.make_rating(invite, question_id=2,
+                         question_text="What jumped over the moon?",
+                         answer_text="A cricket", answer_value="cricket")
+        self.make_rating(invite, question_id=3,
+                         question_text="What reclines on the moon?",
+                         answer_text="A rabbit", answer_value="rabbit")
+        # Execute
+        response = self.client.get('/api/v1/rating/',
+                                   {"question_id": 2},
+                                   content_type='application/json')
+        results = response.json()
+
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(results["count"], 2)
+        self.assertEqual(len(results["results"]), 2)
+        self.assertEqual(Rating.objects.all().count(), 4)
+
+    def test_update_rating(self):
+        # Setup
+        invite = self.make_invite()
+        rating = self.make_rating(invite)
+        self.assertEqual(rating.answer_text, "Cheese")
+        self.assertEqual(rating.answer_value, "cheese")
+        patch_data = {
+            "answer_text": "Swiss Cheese"
+        }
+        # Execute
+        # use adminclient to make the request
+        response = self.adminclient.patch('/api/v1/rating/%s/' % rating.id,
+                                          json.dumps(patch_data),
+                                          content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        rating.refresh_from_db()
+        self.assertEqual(rating.answer_text, "Swiss Cheese")
+        self.assertEqual(rating.answer_value, "cheese")
+        self.assertEqual(rating.created_by, self.user)
+        self.assertEqual(rating.updated_by, self.adminuser)
+
+    def test_delete_rating(self):
+        # Setup
+        invite = self.make_invite()
+        rating = self.make_rating(invite)
+        self.assertEqual(Invite.objects.all().count(), 1)
+        self.assertEqual(Rating.objects.all().count(), 1)
+        # Execute
+        response = self.client.delete('/api/v1/rating/%s/' % rating.id,
+                                      content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Invite.objects.all().count(), 1)
+        self.assertEqual(Rating.objects.all().count(), 0)
+
+    # Test webhook
     def test_create_webhook(self):
         # Setup
         user = User.objects.get(username='testadminuser')
