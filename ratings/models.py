@@ -4,6 +4,8 @@ from django.contrib.postgres.fields import JSONField
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 @python_2_unicode_compatible
@@ -54,6 +56,16 @@ class Invite(models.Model):
     def __str__(self):  # __unicode__ on Python 2
         return "Invite for rating version %s to identity %s" % (
             self.version, self.identity)
+
+
+@receiver(post_save, sender=Invite)
+def psh_send_invite_message(sender, instance, created, **kwargs):
+    """ Post save hook to fire Invite message sending task
+    """
+    if created:
+        from .tasks import send_invite_message
+        send_invite_message.apply_async(
+            kwargs={"invite_id": str(instance.id)})
 
 
 @python_2_unicode_compatible

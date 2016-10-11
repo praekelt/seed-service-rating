@@ -169,6 +169,9 @@ CELERY_ROUTES = {
     'celery.backend_cleanup': {
         'queue': 'mediumpriority',
     },
+    'ratings.tasks.send_invite_message': {
+        'queue': 'priority',
+    },
     'ratings.tasks.deliver_hook_wrapper': {
         'queue': 'priority',
     },
@@ -181,11 +184,13 @@ CELERY_ACCEPT_CONTENT = ['json']
 djcelery.setup_loader()
 
 TOTAL_INVITES_TO_SEND = int(os.environ.get('TOTAL_INVITES_TO_SEND', '2'))
-
 DAYS_BETWEEN_INVITES = int(os.environ.get('DAYS_BETWEEN_INVITES', '7'))
-
 INVITE_TEXT = os.environ.get(
     'INVITE_TEXT',
     'Thank you for registering. We can only improve if we get your feedback. '
     'Please dial *134*550*4# to rate the service you received at the clinic '
     'you registered at')
+MESSAGE_SENDER_URL = os.environ.get('MESSAGE_SENDER_URL',
+                                    'http://ms/api/v1')
+MESSAGE_SENDER_TOKEN = os.environ.get('MESSAGE_SENDER_TOKEN',
+                                      'REPLACEME')

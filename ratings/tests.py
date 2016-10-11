@@ -1,13 +1,16 @@
 import json
+import responses
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.db.models.signals import post_save
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 from rest_hooks.models import Hook
+from rest_hooks.models import model_saved
 
-from .models import Invite, Rating
+from .models import Invite, Rating, psh_send_invite_message
 
 
 class APITestCase(TestCase):
@@ -50,8 +53,33 @@ class AuthenticatedAPITestCase(APITestCase):
         }
         return Rating.objects.create(**data)
 
+    def _replace_post_save_hooks(self):
+        def has_listeners():
+            return post_save.has_listeners(Invite)
+        assert has_listeners(), (
+            "Invite model has no post_save listeners. Make sure"
+            " helpers cleaned up properly in earlier tests.")
+        post_save.disconnect(receiver=psh_send_invite_message,
+                             sender=Invite)
+        post_save.disconnect(receiver=model_saved,
+                             dispatch_uid='instance-saved-hook')
+        assert not has_listeners(), (
+            "Invite model still has post_save listeners. Make sure"
+            " helpers cleaned up properly in earlier tests.")
+
+    def _restore_post_save_hooks(self):
+        def has_listeners():
+            return post_save.has_listeners(Invite)
+        assert not has_listeners(), (
+            "Invite model still has post_save listeners. Make sure"
+            " helpers removed them properly in earlier tests.")
+        post_save.connect(psh_send_invite_message, sender=Invite)
+
     def setUp(self):
         super(AuthenticatedAPITestCase, self).setUp()
+        self._replace_post_save_hooks()
+
+        # Normal User setup
         self.username = 'testuser'
         self.password = 'testpass'
         self.user = User.objects.create_user(self.username,
@@ -72,6 +100,9 @@ class AuthenticatedAPITestCase(APITestCase):
         self.admintoken = admintoken.key
         self.adminclient.credentials(
             HTTP_AUTHORIZATION='Token ' + self.admintoken)
+
+    def tearDown(self):
+        self._restore_post_save_hooks()
 
 
 class TestRatingApp(AuthenticatedAPITestCase):
@@ -337,6 +368,42 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Invite.objects.all().count(), 1)
         self.assertEqual(Rating.objects.all().count(), 0)
+
+    # Test invite created message sending
+    @responses.activate
+    def test_created_send_invite_message_post_save(self):
+        # Setup
+        # . reactivate post-save hook
+        post_save.connect(psh_send_invite_message, sender=Invite)
+        # . mock message sender post request
+        responses.add(
+            responses.POST,
+            "http://ms/api/v1/outbound/",
+            json={
+                "url": "http://ms/api/v1/outbound/c7f3c839-2bf5-42d1-86b9-ccb886645fb4/",  # noqa
+                "id": "c7f3c839-2bf5-42d1-86b9-ccb886645fb4",
+                "version": 1,
+                "to_addr": "+27123",
+                "content": "Please rate the clinic service",
+                "vumi_message_id": None,
+                "delivered": False,
+                "attempts": 0,
+                "metadata": {},
+                "created_at": "2016-03-24T13:43:43.614952Z",
+                "updated_at": "2016-03-24T13:43:43.614921Z"
+            },
+            status=200, content_type='application/json'
+        )
+
+        # Execute
+        self.make_invite()
+
+        # Check
+        # . check number of calls made
+        self.assertEqual(len(responses.calls), 1)
+
+        # Teardown
+        post_save.disconnect(psh_send_invite_message, sender=Invite)
 
     # Test webhook
     def test_create_webhook(self):
