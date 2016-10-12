@@ -13,4 +13,6 @@ urlpatterns = [
     url(r'^api/v1/user/token/$', views.UserView.as_view(),
         name='create-user-token'),
     url(r'^api/v1/', include(router.urls)),
+    url(r'^api/v1/invite/send$',
+        views.InviteSend.as_view()),
 ]

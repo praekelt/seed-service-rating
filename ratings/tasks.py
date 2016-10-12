@@ -1,5 +1,6 @@
 import json
 import requests
+import datetime
 
 from celery.task import Task
 from celery.utils.log import get_task_logger
@@ -13,6 +14,28 @@ ms_client = MessageSenderApiClient(
     api_url=settings.MESSAGE_SENDER_URL,
     auth_token=settings.MESSAGE_SENDER_TOKEN
 )
+
+
+class SendInviteMessages(Task):
+    """ Task that finds invite messages that should be sent and
+    creates subtasks to send each of these messages
+    """
+    name = "seed_service_rating.ratings.tasks.send_invite_messages"
+    l = get_task_logger(__name__)
+
+    def run(self, **kwargs):
+        self.l = self.get_logger(**kwargs)
+        msgs_to_send = Invite.objects.filter(
+            completed=False, expired=False,
+            invites_sent__lt=settings.TOTAL_INVITES_TO_SEND,
+            send_after__lt=datetime.datetime.now(),
+        )
+        for msg in msgs_to_send:
+            send_invite_message.apply_async(args=[msg.id])
+
+        return "%s Invites queued for sending" % len(msgs_to_send)
+
+send_invite_messages = SendInviteMessages()
 
 
 class SendInviteMessage(Task):
@@ -64,11 +87,38 @@ class SendInviteMessage(Task):
         invite = Invite.objects.get(id=invite_id)
         msg_payload = self.compile_msg_payload(invite)
         result = self.send_message(msg_payload)
-        print(result)
+        self.l.info("Creating task to update invite after send")
+        post_send_update_invite.apply_async(args=[invite_id])
+        self.l.info("Created task to update invite after send")
         return "Message queued for send. ID: <%s>" % str(result["id"])
 
 
 send_invite_message = SendInviteMessage()
+
+
+class PostSendUpdateInvite(Task):
+    """ Task that updates the necessary fields after sending
+    an invite message
+    """
+    name = "seed_service_rating.ratings.tasks.post_send_update_invite"
+    l = get_task_logger(__name__)
+
+    def run(self, invite_id, **kwargs):
+        self.l = self.get_logger(**kwargs)
+        self.l.info("Looking up the invite")
+        invite = Invite.objects.get(id=invite_id)
+        invite.invites_sent += 1
+        invite.invited = True
+        invite.send_after = invite.send_after + datetime.timedelta(days=7)
+        invite.save()
+        self.l.info("Updating Invite")
+
+
+        return "unfinished"
+
+post_send_update_invite = PostSendUpdateInvite()
+
+
 
 
 class DeliverHook(Task):

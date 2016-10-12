@@ -10,6 +10,7 @@ from rest_framework.authtoken.models import Token
 from .serializers import (InviteSerializer, RatingSerializer, HookSerializer,
                           CreateUserSerializer)
 from .models import Invite, Rating
+from .tasks import send_invite_messages
 
 
 class HookViewSet(viewsets.ModelViewSet):
@@ -41,6 +42,21 @@ class InviteViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
+
+
+class InviteSend(APIView):
+
+    """ Triggers a send for the service rating invitation messages
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        """ Triggers the task that sends invitation messages
+        """
+        status = 201
+        accepted = {"accepted": True}
+        send_invite_messages.apply_async()
+        return Response(accepted, status=status)
 
 
 class RatingViewSet(viewsets.ModelViewSet):

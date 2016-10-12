@@ -1,5 +1,6 @@
 import json
 import responses
+from datetime import datetime, timezone
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -9,8 +10,9 @@ from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 from rest_hooks.models import Hook
 from rest_hooks.models import model_saved
+from freezegun import freeze_time
 
-from .models import Invite, Rating, psh_send_invite_message
+from .models import Invite, Rating
 
 
 class APITestCase(TestCase):
@@ -59,8 +61,7 @@ class AuthenticatedAPITestCase(APITestCase):
         assert has_listeners(), (
             "Invite model has no post_save listeners. Make sure"
             " helpers cleaned up properly in earlier tests.")
-        post_save.disconnect(receiver=psh_send_invite_message,
-                             sender=Invite)
+        # post_save.disconnect(receiver=psh_send_invite_message, sender=Invite)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')
         assert not has_listeners(), (
@@ -73,7 +74,9 @@ class AuthenticatedAPITestCase(APITestCase):
         assert not has_listeners(), (
             "Invite model still has post_save listeners. Make sure"
             " helpers removed them properly in earlier tests.")
-        post_save.connect(psh_send_invite_message, sender=Invite)
+        # post_save.connect(psh_send_invite_message, sender=Invite)
+        post_save.connect(receiver=model_saved,
+                          dispatch_uid='instance-saved-hook')
 
     def setUp(self):
         super(AuthenticatedAPITestCase, self).setUp()
@@ -119,6 +122,7 @@ class TestRatingApp(AuthenticatedAPITestCase):
                          % request.status_code)
 
     # Test Invite API
+    @freeze_time("2016-03-23 09:00:00")
     def test_create_invite(self):
         post_data = {
             "identity": "210ac8c7-1f23-46af-a186-2468c89f7cc1",
@@ -145,7 +149,8 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(d.completed, False)
         self.assertEqual(d.expired, False)
         self.assertEqual(d.invites_sent, 0)
-        self.assertEqual(d.send_after, None)
+        self.assertEqual(d.send_after,
+                         datetime(2016, 3, 23, 9, 0, tzinfo=timezone.utc))
         self.assertEqual(d.version, 1)
         self.assertEqual(d.expires_at, None)
         self.assertEqual(d.created_by, self.user)
@@ -370,11 +375,50 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(Rating.objects.all().count(), 0)
 
     # Test invite created message sending
+    @freeze_time("2016-03-23 09:00:00")
     @responses.activate
-    def test_created_send_invite_message_post_save(self):
+    def test_invite_send_endpoint(self):
         # Setup
-        # . reactivate post-save hook
-        post_save.connect(psh_send_invite_message, sender=Invite)
+        # . test freezetime is working
+        self.assertEqual(datetime(2016, 3, 23, 9, 0, 0, tzinfo=timezone.utc),
+                         datetime.now(timezone.utc))
+        # . make an invite that should send on next endpoint hit
+        inviteA = self.make_invite()
+        inviteA.invited = False
+        inviteA.invites_sent = 0
+        inviteA.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        inviteA.save()
+        # . make an invite that should send tomorrow
+        inviteB = self.make_invite(
+            identity="ea7069c7-6e6d-48fd-a839-d41b13d3a54a")
+        inviteB.invited = False
+        inviteB.invites_sent = 0
+        inviteB.send_after = datetime(2016, 3, 23, 9, 1, tzinfo=timezone.utc)
+        inviteB.save()
+        # . make an invite that has sent all its reminders
+        inviteC = self.make_invite(
+            identity="48630fb3-862d-4974-8e69-ac3ee7b0e88e")
+        inviteC.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        inviteC.invited = True
+        inviteC.invites_sent = 2
+        inviteC.save()
+        # . make an invite that has expired
+        inviteD = self.make_invite(
+            identity="04b9fe99-8edc-40bd-911e-e41deaa7d018")
+        inviteD.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        inviteD.invited = True
+        inviteD.invites_sent = 1
+        inviteD.expired = True
+        inviteD.save()
+        # . make an invite that has been completed
+        inviteE = self.make_invite(
+            identity="7afbb362-ad35-409b-8ee2-30a6bc020ccb")
+        inviteE.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        inviteE.invited = False
+        inviteE.invites_sent = 0
+        inviteE.completed = True
+        inviteE.save()
+
         # . mock message sender post request
         responses.add(
             responses.POST,
@@ -396,14 +440,46 @@ class TestRatingApp(AuthenticatedAPITestCase):
         )
 
         # Execute
-        self.make_invite()
+        response = self.client.post('/api/v1/invite/send',
+                                    content_type='application/json')
 
         # Check
+        # . check response
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         # . check number of calls made
         self.assertEqual(len(responses.calls), 1)
-
-        # Teardown
-        post_save.disconnect(psh_send_invite_message, sender=Invite)
+        # . check inviteA has been updated
+        inviteA.refresh_from_db()
+        self.assertEqual(inviteA.invited, True)
+        self.assertEqual(inviteA.invites_sent, 1)
+        self.assertEqual(inviteA.send_after,
+                         datetime(2016, 3, 30, 8, 59, tzinfo=timezone.utc))
+        # . check inviteB has not been updated
+        inviteB.refresh_from_db()
+        self.assertEqual(inviteB.invited, False)
+        self.assertEqual(inviteB.invites_sent, 0)
+        self.assertEqual(inviteB.send_after,
+                         datetime(2016, 3, 23, 9, 1, tzinfo=timezone.utc))
+        # . check inviteC has not been updated
+        inviteC.refresh_from_db()
+        self.assertEqual(inviteC.invited, True)
+        self.assertEqual(inviteC.invites_sent, 2)
+        self.assertEqual(inviteC.send_after,
+                         datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc))
+        # . check inviteD has not been updated
+        inviteD.refresh_from_db()
+        self.assertEqual(inviteD.invited, True)
+        self.assertEqual(inviteD.invites_sent, 1)
+        self.assertEqual(inviteD.expired, True)
+        self.assertEqual(inviteD.send_after,
+                         datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc))
+        # . check inviteE has not been updated
+        inviteE.refresh_from_db()
+        self.assertEqual(inviteE.invited, False)
+        self.assertEqual(inviteE.invites_sent, 0)
+        self.assertEqual(inviteE.completed, True)
+        self.assertEqual(inviteE.send_after,
+                         datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc))
 
     # Test webhook
     def test_create_webhook(self):

@@ -169,8 +169,14 @@ CELERY_ROUTES = {
     'celery.backend_cleanup': {
         'queue': 'mediumpriority',
     },
-    'ratings.tasks.send_invite_message': {
+    'ratings.tasks.send_invite_messages': {
         'queue': 'priority',
+    },
+    'ratings.tasks.send_invite_message': {
+        'queue': 'mediumpriority',
+    },
+    'ratings.tasks.post_send_update_invite': {
+        'queue': 'mediumpriority',
     },
     'ratings.tasks.deliver_hook_wrapper': {
         'queue': 'priority',

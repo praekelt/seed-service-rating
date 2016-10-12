@@ -4,8 +4,8 @@ from django.contrib.postgres.fields import JSONField
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+# from django.db.models.signals import post_save
+# from django.dispatch import receiver
 
 
 @python_2_unicode_compatible
@@ -23,7 +23,7 @@ class Invite(models.Model):
     expired = models.BooleanField(default=False)
     invite = JSONField(null=True, blank=True)
     invites_sent = models.IntegerField(default=0)
-    send_after = models.DateTimeField(null=True, blank=True)
+    send_after = models.DateTimeField(auto_now_add=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     expires_at = models.DateTimeField(null=True, blank=True)
@@ -58,14 +58,14 @@ class Invite(models.Model):
             self.version, self.identity)
 
 
-@receiver(post_save, sender=Invite)
-def psh_send_invite_message(sender, instance, created, **kwargs):
-    """ Post save hook to fire Invite message sending task
-    """
-    if created:
-        from .tasks import send_invite_message
-        send_invite_message.apply_async(
-            kwargs={"invite_id": str(instance.id)})
+# @receiver(post_save, sender=Invite)
+# def psh_send_invite_message(sender, instance, created, **kwargs):
+#     """ Post save hook to fire Invite message sending task
+#     """
+#     if created:
+#         from .tasks import send_invite_message
+#         send_invite_message.apply_async(
+#             kwargs={"invite_id": str(instance.id)})
 
 
 @python_2_unicode_compatible
