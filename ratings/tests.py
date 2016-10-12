@@ -1,6 +1,7 @@
 import json
 import responses
-from datetime import datetime, timezone
+import pytz
+from datetime import datetime
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -150,7 +151,7 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(d.expired, False)
         self.assertEqual(d.invites_sent, 0)
         self.assertEqual(d.send_after,
-                         datetime(2016, 3, 23, 9, 0, tzinfo=timezone.utc))
+                         datetime(2016, 3, 23, 9, 0, tzinfo=pytz.utc))
         self.assertEqual(d.version, 1)
         self.assertEqual(d.expires_at, None)
         self.assertEqual(d.created_by, self.user)
@@ -380,8 +381,8 @@ class TestRatingApp(AuthenticatedAPITestCase):
     def test_invite_send_endpoint(self):
         # Setup
         # . test freezetime is working
-        self.assertEqual(datetime(2016, 3, 23, 9, 0, 0, tzinfo=timezone.utc),
-                         datetime.now(timezone.utc))
+        self.assertEqual(datetime(2016, 3, 23, 9, 0, 0, tzinfo=pytz.utc),
+                         datetime.now(pytz.utc))
         # . make an invite that should send on next endpoint hit, with
         # . invite json blob not provided
         invite0_uuid = "f81d5522-b6ba-455c-b622-e6d5f9d4ae8c"
@@ -389,33 +390,33 @@ class TestRatingApp(AuthenticatedAPITestCase):
         invite0.invited = False
         invite0.invites_sent = 1
         invite0.invite = {}
-        invite0.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        invite0.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=pytz.utc)
         invite0.save()
         # . make an invite that should send on next endpoint hit, with
         # . invite json blob provided as per default
         invite1 = self.make_invite()
         invite1.invited = False
         invite1.invites_sent = 0
-        invite1.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        invite1.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=pytz.utc)
         invite1.save()
         # . make an invite that should not send yet
         invite2 = self.make_invite(
             identity="ea7069c7-6e6d-48fd-a839-d41b13d3a54a")
         invite2.invited = False
         invite2.invites_sent = 0
-        invite2.send_after = datetime(2016, 3, 23, 9, 1, tzinfo=timezone.utc)
+        invite2.send_after = datetime(2016, 3, 23, 9, 1, tzinfo=pytz.utc)
         invite2.save()
         # . make an invite that has sent all its reminders
         invite3 = self.make_invite(
             identity="48630fb3-862d-4974-8e69-ac3ee7b0e88e")
-        invite3.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        invite3.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=pytz.utc)
         invite3.invited = True
         invite3.invites_sent = 2
         invite3.save()
         # . make an invite that has expired
         invite4 = self.make_invite(
             identity="04b9fe99-8edc-40bd-911e-e41deaa7d018")
-        invite4.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        invite4.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=pytz.utc)
         invite4.invited = True
         invite4.invites_sent = 1
         invite4.expired = True
@@ -423,7 +424,7 @@ class TestRatingApp(AuthenticatedAPITestCase):
         # . make an invite that has been completed
         invite5 = self.make_invite(
             identity="7afbb362-ad35-409b-8ee2-30a6bc020ccb")
-        invite5.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        invite5.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=pytz.utc)
         invite5.invited = False
         invite5.invites_sent = 0
         invite5.completed = True
@@ -475,7 +476,7 @@ class TestRatingApp(AuthenticatedAPITestCase):
             "metadata": {}
         })
         self.assertEqual(invite0.send_after,
-                         datetime(2016, 3, 30, 8, 59, tzinfo=timezone.utc))
+                         datetime(2016, 3, 30, 8, 59, tzinfo=pytz.utc))
         # . check invite1 has been updated
         invite1.refresh_from_db()
         self.assertEqual(invite1.invited, True)
@@ -486,33 +487,33 @@ class TestRatingApp(AuthenticatedAPITestCase):
             "metadata": {}
         })
         self.assertEqual(invite1.send_after,
-                         datetime(2016, 3, 30, 8, 59, tzinfo=timezone.utc))
+                         datetime(2016, 3, 30, 8, 59, tzinfo=pytz.utc))
         # . check invite2 has not been updated
         invite2.refresh_from_db()
         self.assertEqual(invite2.invited, False)
         self.assertEqual(invite2.invites_sent, 0)
         self.assertEqual(invite2.send_after,
-                         datetime(2016, 3, 23, 9, 1, tzinfo=timezone.utc))
+                         datetime(2016, 3, 23, 9, 1, tzinfo=pytz.utc))
         # . check invite3 has not been updated
         invite3.refresh_from_db()
         self.assertEqual(invite3.invited, True)
         self.assertEqual(invite3.invites_sent, 2)
         self.assertEqual(invite3.send_after,
-                         datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc))
+                         datetime(2016, 3, 23, 8, 59, tzinfo=pytz.utc))
         # . check invite4 has not been updated
         invite4.refresh_from_db()
         self.assertEqual(invite4.invited, True)
         self.assertEqual(invite4.invites_sent, 1)
         self.assertEqual(invite4.expired, True)
         self.assertEqual(invite4.send_after,
-                         datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc))
+                         datetime(2016, 3, 23, 8, 59, tzinfo=pytz.utc))
         # . check invite5 has not been updated
         invite5.refresh_from_db()
         self.assertEqual(invite5.invited, False)
         self.assertEqual(invite5.invites_sent, 0)
         self.assertEqual(invite5.completed, True)
         self.assertEqual(invite5.send_after,
-                         datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc))
+                         datetime(2016, 3, 23, 8, 59, tzinfo=pytz.utc))
 
     # Test webhook
     def test_create_webhook(self):
