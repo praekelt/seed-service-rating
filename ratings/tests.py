@@ -382,7 +382,17 @@ class TestRatingApp(AuthenticatedAPITestCase):
         # . test freezetime is working
         self.assertEqual(datetime(2016, 3, 23, 9, 0, 0, tzinfo=timezone.utc),
                          datetime.now(timezone.utc))
-        # . make an invite that should send on next endpoint hit
+        # . make an invite that should send on next endpoint hit, with
+        # . invite json blob not provided
+        invite0_uuid = "f81d5522-b6ba-455c-b622-e6d5f9d4ae8c"
+        invite0 = self.make_invite(identity=invite0_uuid)
+        invite0.invited = False
+        invite0.invites_sent = 1
+        invite0.invite = {}
+        invite0.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        invite0.save()
+        # . make an invite that should send on next endpoint hit, with
+        # . invite json blob provided as per default
         invite1 = self.make_invite()
         invite1.invited = False
         invite1.invites_sent = 0
@@ -424,19 +434,23 @@ class TestRatingApp(AuthenticatedAPITestCase):
             responses.POST,
             "http://ms/api/v1/outbound/",
             json={
-                "url": "http://ms/api/v1/outbound/c7f3c839-2bf5-42d1-86b9-ccb886645fb4/",  # noqa
-                "id": "c7f3c839-2bf5-42d1-86b9-ccb886645fb4",
-                "version": 1,
-                "to_addr": "+27123",
-                "content": "Please rate the clinic service",
-                "vumi_message_id": None,
-                "delivered": False,
-                "attempts": 0,
-                "metadata": {},
-                "created_at": "2016-03-24T13:43:43.614952Z",
-                "updated_at": "2016-03-24T13:43:43.614921Z"
+                "id": "c7f3c839-2bf5-42d1-86b9-ccb886645fb4"
             },
             status=200, content_type='application/json'
+        )
+
+        # mock identity address lookup
+        responses.add(
+            responses.GET,
+            "http://is/api/v1/identities/%s/addresses/msisdn?default=True" % invite0_uuid,  # noqa
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{"address": "+27345"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
         )
 
         # Execute
@@ -447,11 +461,30 @@ class TestRatingApp(AuthenticatedAPITestCase):
         # . check response
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         # . check number of calls made
-        self.assertEqual(len(responses.calls), 1)
+        self.assertEqual(len(responses.calls), 3)  # 2 /outbound, 1 /identities
+        # . check invite0 has been updated
+        invite0.refresh_from_db()
+        self.assertEqual(invite0.invited, True)
+        self.assertEqual(invite0.invites_sent, 2)
+        self.assertEqual(invite0.invite, {
+            "to_addr": "+27345",
+            "content": 'Thank you for registering. We can only improve if we '
+                       'get your feedback. Please dial *134*550*4# to rate '
+                       'the service you received at the clinic you registered '
+                       'at',
+            "metadata": {}
+        })
+        self.assertEqual(invite0.send_after,
+                         datetime(2016, 3, 30, 8, 59, tzinfo=timezone.utc))
         # . check invite1 has been updated
         invite1.refresh_from_db()
         self.assertEqual(invite1.invited, True)
         self.assertEqual(invite1.invites_sent, 1)
+        self.assertEqual(invite1.invite, {
+            "to_addr": "+27123",
+            "content": 'Please dial *120*1234# and rate our service',
+            "metadata": {}
+        })
         self.assertEqual(invite1.send_after,
                          datetime(2016, 3, 30, 8, 59, tzinfo=timezone.utc))
         # . check invite2 has not been updated

@@ -200,3 +200,7 @@ MESSAGE_SENDER_URL = os.environ.get('MESSAGE_SENDER_URL',
                                     'http://ms/api/v1')
 MESSAGE_SENDER_TOKEN = os.environ.get('MESSAGE_SENDER_TOKEN',
                                       'REPLACEME')
+IDENTITY_STORE_URL = os.environ.get('IDENTITY_STORE_URL',
+                                    'http://is/api/v1')
+IDENTITY_STORE_TOKEN = os.environ.get('IDENTITY_STORE_TOKEN',
+                                      'REPLACEME')

@@ -16,6 +16,23 @@ ms_client = MessageSenderApiClient(
 )
 
 
+def get_identity_address(identity_uuid):
+    # TODO: Move this function to seed-services-client (also in
+    #       stage-based-messaging)
+    url = "%s/%s/%s/addresses/msisdn" % (settings.IDENTITY_STORE_URL,
+                                         "identities", identity_uuid)
+    params = {"default": True}
+    headers = {
+        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
+        'Content-Type': 'application/json'
+    }
+    r = requests.get(url, params=params, headers=headers).json()
+    if len(r["results"]) > 0:
+        return r["results"][0]["address"]
+    else:
+        return None
+
+
 class SendInviteMessages(Task):
     """ Task that finds invite messages that should be sent and
     creates subtasks to send each of these messages
@@ -49,25 +66,40 @@ class SendInviteMessage(Task):
         a dict that can be Posted to the message sender
         """
         self.l.info("Compiling the outbound message payload")
+        update_invite = False
+
         # Determine the recipient address
         if "to_addr" in invite.invite:
             to_addr = invite.invite["to_addr"]
         else:
-            # TODO: Lookup default address if to_addr not provided
-            #       This is a potential future improvement
-            pass
+            update_invite = True
+            to_addr = get_identity_address(invite.identity)
 
         # Determine the message content
         if "content" in invite.invite:
             content = invite.invite["content"]
         else:
+            update_invite = True
             content = settings.INVITE_TEXT
+
+        # Determine the metadata
+        if "metadata" in invite.invite:
+            metadata = invite.invite["metadata"]
+        else:
+            update_invite = True
+            metadata = {}
 
         msg_payload = {
             "to_addr": to_addr,
             "content": content,
-            "metadata": {}
+            "metadata": metadata
         }
+
+        if update_invite is True:
+            self.l.info("Updating the invite.invite field")
+            invite.invite = msg_payload
+            invite.save()
+
         self.l.info("Compiled the outbound message payload")
         return msg_payload
 
