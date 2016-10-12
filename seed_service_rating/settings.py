@@ -173,10 +173,10 @@ CELERY_ROUTES = {
         'queue': 'priority',
     },
     'ratings.tasks.send_invite_message': {
-        'queue': 'mediumpriority',
+        'queue': 'priority',
     },
     'ratings.tasks.post_send_update_invite': {
-        'queue': 'mediumpriority',
+        'queue': 'priority',
     },
     'ratings.tasks.deliver_hook_wrapper': {
         'queue': 'priority',

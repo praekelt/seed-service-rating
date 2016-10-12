@@ -105,20 +105,18 @@ class PostSendUpdateInvite(Task):
 
     def run(self, invite_id, **kwargs):
         self.l = self.get_logger(**kwargs)
-        self.l.info("Looking up the invite")
+        self.l.info("Looking up invite %s" % invite_id)
         invite = Invite.objects.get(id=invite_id)
+        self.l.info("Updating the Invite")
         invite.invites_sent += 1
         invite.invited = True
-        invite.send_after = invite.send_after + datetime.timedelta(days=7)
+        invite.send_after = invite.send_after + datetime.timedelta(
+            days=settings.DAYS_BETWEEN_INVITES)
         invite.save()
-        self.l.info("Updating Invite")
-
-
-        return "unfinished"
+        self.l.info("Updated the Invite")
+        return "Updated Invite %s" % invite_id
 
 post_send_update_invite = PostSendUpdateInvite()
-
-
 
 
 class DeliverHook(Task):

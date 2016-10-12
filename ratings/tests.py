@@ -374,7 +374,7 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(Invite.objects.all().count(), 1)
         self.assertEqual(Rating.objects.all().count(), 0)
 
-    # Test invite created message sending
+    # Test invite message sending
     @freeze_time("2016-03-23 09:00:00")
     @responses.activate
     def test_invite_send_endpoint(self):
@@ -383,41 +383,41 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(datetime(2016, 3, 23, 9, 0, 0, tzinfo=timezone.utc),
                          datetime.now(timezone.utc))
         # . make an invite that should send on next endpoint hit
-        inviteA = self.make_invite()
-        inviteA.invited = False
-        inviteA.invites_sent = 0
-        inviteA.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
-        inviteA.save()
-        # . make an invite that should send tomorrow
-        inviteB = self.make_invite(
+        invite1 = self.make_invite()
+        invite1.invited = False
+        invite1.invites_sent = 0
+        invite1.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        invite1.save()
+        # . make an invite that should not send yet
+        invite2 = self.make_invite(
             identity="ea7069c7-6e6d-48fd-a839-d41b13d3a54a")
-        inviteB.invited = False
-        inviteB.invites_sent = 0
-        inviteB.send_after = datetime(2016, 3, 23, 9, 1, tzinfo=timezone.utc)
-        inviteB.save()
+        invite2.invited = False
+        invite2.invites_sent = 0
+        invite2.send_after = datetime(2016, 3, 23, 9, 1, tzinfo=timezone.utc)
+        invite2.save()
         # . make an invite that has sent all its reminders
-        inviteC = self.make_invite(
+        invite3 = self.make_invite(
             identity="48630fb3-862d-4974-8e69-ac3ee7b0e88e")
-        inviteC.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
-        inviteC.invited = True
-        inviteC.invites_sent = 2
-        inviteC.save()
+        invite3.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        invite3.invited = True
+        invite3.invites_sent = 2
+        invite3.save()
         # . make an invite that has expired
-        inviteD = self.make_invite(
+        invite4 = self.make_invite(
             identity="04b9fe99-8edc-40bd-911e-e41deaa7d018")
-        inviteD.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
-        inviteD.invited = True
-        inviteD.invites_sent = 1
-        inviteD.expired = True
-        inviteD.save()
+        invite4.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        invite4.invited = True
+        invite4.invites_sent = 1
+        invite4.expired = True
+        invite4.save()
         # . make an invite that has been completed
-        inviteE = self.make_invite(
+        invite5 = self.make_invite(
             identity="7afbb362-ad35-409b-8ee2-30a6bc020ccb")
-        inviteE.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
-        inviteE.invited = False
-        inviteE.invites_sent = 0
-        inviteE.completed = True
-        inviteE.save()
+        invite5.send_after = datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc)
+        invite5.invited = False
+        invite5.invites_sent = 0
+        invite5.completed = True
+        invite5.save()
 
         # . mock message sender post request
         responses.add(
@@ -448,37 +448,37 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         # . check number of calls made
         self.assertEqual(len(responses.calls), 1)
-        # . check inviteA has been updated
-        inviteA.refresh_from_db()
-        self.assertEqual(inviteA.invited, True)
-        self.assertEqual(inviteA.invites_sent, 1)
-        self.assertEqual(inviteA.send_after,
+        # . check invite1 has been updated
+        invite1.refresh_from_db()
+        self.assertEqual(invite1.invited, True)
+        self.assertEqual(invite1.invites_sent, 1)
+        self.assertEqual(invite1.send_after,
                          datetime(2016, 3, 30, 8, 59, tzinfo=timezone.utc))
-        # . check inviteB has not been updated
-        inviteB.refresh_from_db()
-        self.assertEqual(inviteB.invited, False)
-        self.assertEqual(inviteB.invites_sent, 0)
-        self.assertEqual(inviteB.send_after,
+        # . check invite2 has not been updated
+        invite2.refresh_from_db()
+        self.assertEqual(invite2.invited, False)
+        self.assertEqual(invite2.invites_sent, 0)
+        self.assertEqual(invite2.send_after,
                          datetime(2016, 3, 23, 9, 1, tzinfo=timezone.utc))
-        # . check inviteC has not been updated
-        inviteC.refresh_from_db()
-        self.assertEqual(inviteC.invited, True)
-        self.assertEqual(inviteC.invites_sent, 2)
-        self.assertEqual(inviteC.send_after,
+        # . check invite3 has not been updated
+        invite3.refresh_from_db()
+        self.assertEqual(invite3.invited, True)
+        self.assertEqual(invite3.invites_sent, 2)
+        self.assertEqual(invite3.send_after,
                          datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc))
-        # . check inviteD has not been updated
-        inviteD.refresh_from_db()
-        self.assertEqual(inviteD.invited, True)
-        self.assertEqual(inviteD.invites_sent, 1)
-        self.assertEqual(inviteD.expired, True)
-        self.assertEqual(inviteD.send_after,
+        # . check invite4 has not been updated
+        invite4.refresh_from_db()
+        self.assertEqual(invite4.invited, True)
+        self.assertEqual(invite4.invites_sent, 1)
+        self.assertEqual(invite4.expired, True)
+        self.assertEqual(invite4.send_after,
                          datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc))
-        # . check inviteE has not been updated
-        inviteE.refresh_from_db()
-        self.assertEqual(inviteE.invited, False)
-        self.assertEqual(inviteE.invites_sent, 0)
-        self.assertEqual(inviteE.completed, True)
-        self.assertEqual(inviteE.send_after,
+        # . check invite5 has not been updated
+        invite5.refresh_from_db()
+        self.assertEqual(invite5.invited, False)
+        self.assertEqual(invite5.invites_sent, 0)
+        self.assertEqual(invite5.completed, True)
+        self.assertEqual(invite5.send_after,
                          datetime(2016, 3, 23, 8, 59, tzinfo=timezone.utc))
 
     # Test webhook
