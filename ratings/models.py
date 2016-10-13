@@ -11,7 +11,27 @@ class Invite(models.Model):
 
     """
     An invitation for Rating
-    invite should be in a format suitable for posting to the message sender
+
+    Fields description:
+        id: auto-generated uuid id
+        identity: uuid identifying the person that is invited
+        version: version number
+        invited: whether an invite message has been sent to the identity
+        completed: whether the invite has been completed
+        expired: whether the invite has expired
+        invite: optional json blob that can contain messaging information, see
+                tasks.SendInviteMessage.compile_msg_payload for how this is
+                used
+                useful fields that can be provided:
+                {
+                    to_addr: msisdn to send invite message to
+                    content: message content to use rather than INVITE_TEXT
+                    metadata: for use with voice messaging
+                }
+        invites_sent: number of invite messages sent
+        send_after: datetime after which the next invite should be sent
+        expires_at: can be used to set an expiry date for an Invite (expiry not
+                    implemented yet)
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     identity = models.CharField(max_length=36, null=False, blank=False)
@@ -20,9 +40,11 @@ class Invite(models.Model):
     completed = models.BooleanField(default=False)
     expired = models.BooleanField(default=False)
     invite = JSONField(null=True, blank=True)
+    invites_sent = models.IntegerField(default=0)
+    send_after = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    expires_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(User, related_name='invites_created',
                                    null=True)
     updated_by = models.ForeignKey(User, related_name='invites_updated',

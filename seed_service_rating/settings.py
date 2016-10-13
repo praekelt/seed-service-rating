@@ -45,6 +45,7 @@ INSTALLED_APPS = (
     # documentation
     'rest_framework_docs',
     # 3rd party
+    'djcelery',
     'raven.contrib.django.raven_compat',
     'rest_framework',
     'rest_framework.authtoken',
@@ -168,6 +169,15 @@ CELERY_ROUTES = {
     'celery.backend_cleanup': {
         'queue': 'mediumpriority',
     },
+    'ratings.tasks.send_invite_messages': {
+        'queue': 'priority',
+    },
+    'ratings.tasks.send_invite_message': {
+        'queue': 'priority',
+    },
+    'ratings.tasks.post_send_update_invite': {
+        'queue': 'priority',
+    },
     'ratings.tasks.deliver_hook_wrapper': {
         'queue': 'priority',
     },
@@ -178,3 +188,19 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['json']
 
 djcelery.setup_loader()
+
+TOTAL_INVITES_TO_SEND = int(os.environ.get('TOTAL_INVITES_TO_SEND', '2'))
+DAYS_BETWEEN_INVITES = int(os.environ.get('DAYS_BETWEEN_INVITES', '7'))
+INVITE_TEXT = os.environ.get(
+    'INVITE_TEXT',
+    'Thank you for registering. We can only improve if we get your feedback. '
+    'Please dial *134*550*4# to rate the service you received at the clinic '
+    'you registered at')
+MESSAGE_SENDER_URL = os.environ.get('MESSAGE_SENDER_URL',
+                                    'http://ms/api/v1')
+MESSAGE_SENDER_TOKEN = os.environ.get('MESSAGE_SENDER_TOKEN',
+                                      'REPLACEME')
+IDENTITY_STORE_URL = os.environ.get('IDENTITY_STORE_URL',
+                                    'http://is/api/v1')
+IDENTITY_STORE_TOKEN = os.environ.get('IDENTITY_STORE_TOKEN',
+                                      'REPLACEME')
