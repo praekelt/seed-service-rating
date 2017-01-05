@@ -1,10 +1,10 @@
 from django import template
 
-import seed_stage_based_messaging
+import seed_service_rating
 
 register = template.Library()
 
 
 @register.simple_tag
 def current_version():
-    return seed_stage_based_messaging.__version__
+    return seed_service_rating.__version__
