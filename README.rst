@@ -1,7 +1,7 @@
-# seed-service-rating
-Seed Service Rating API
+===================
+Seed Service Rating
+===================
 
-## Concept
 Service Rating is built around two models: Invites and Ratings.
 
 If you want the user to rate the service they received, you first create an Invite for them. The user then gets sent a message to invite them to rate the service they received.

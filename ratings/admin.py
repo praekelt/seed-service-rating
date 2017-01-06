@@ -18,5 +18,6 @@ class RatingAdmin(admin.ModelAdmin):
     list_filter = ("question_id", "created_at", "updated_at",)
     search_fields = ["id", "identity", "invite__id"]
 
+
 admin.site.register(Invite, InviteAdmin)
 admin.site.register(Rating, RatingAdmin)

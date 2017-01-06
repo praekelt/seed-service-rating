@@ -52,6 +52,7 @@ class SendInviteMessages(Task):
 
         return "%s Invites queued for sending" % len(msgs_to_send)
 
+
 send_invite_messages = SendInviteMessages()
 
 
@@ -147,6 +148,7 @@ class PostSendUpdateInvite(Task):
         invite.save()
         self.l.info("Updated the Invite")
         return "Updated Invite %s" % invite_id
+
 
 post_send_update_invite = PostSendUpdateInvite()
 
