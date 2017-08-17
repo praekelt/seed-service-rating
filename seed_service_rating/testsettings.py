@@ -12,3 +12,18 @@ CELERY_EAGER_PROPAGATES_EXCEPTIONS = True
 CELERY_ALWAYS_EAGER = True
 BROKER_BACKEND = 'memory'
 CELERY_RESULT_BACKEND = 'djcelery.backends.database:DatabaseBackend'
+
+# REST Framework conf defaults
+REST_FRAMEWORK = {
+    'PAGE_SIZE': 2,
+    'DEFAULT_PAGINATION_CLASS':
+        'rest_framework.pagination.CursorPagination',
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
+}
