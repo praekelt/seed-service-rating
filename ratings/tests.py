@@ -111,58 +111,6 @@ class AuthenticatedAPITestCase(APITestCase):
 
 class TestRatingApp(AuthenticatedAPITestCase):
 
-    def test_list_webhook(self):
-
-        response = self.adminclient.get('/api/v1/webhook/')
-
-        body = response.json()
-        self.assertEqual(len(body['results']), 0)
-
-    def test_list_pagination_one_page(self):
-        invite = self.make_invite()
-
-        response = self.client.get('/api/v1/invite/')
-
-        body = response.json()
-        self.assertEqual(len(body['results']), 1)
-        self.assertEqual(body['results'][0]['id'], str(invite.id))
-        self.assertIsNone(body['previous'])
-        self.assertIsNone(body['next'])
-
-    def test_list_pagination_two_pages(self):
-        invites = []
-        for i in range(3):
-            invites.append(self.make_invite())
-
-        # Test first page
-        response = self.client.get('/api/v1/invite/')
-
-        body = response.json()
-        self.assertEqual(len(body['results']), 2)
-        self.assertEqual(body['results'][0]['id'], str(invites[2].id))
-        self.assertEqual(body['results'][1]['id'], str(invites[1].id))
-        self.assertIsNone(body['previous'])
-        self.assertIsNotNone(body['next'])
-
-        # Test next page
-        response = self.client.get(body['next'])
-
-        body = response.json()
-        self.assertEqual(len(body['results']), 1)
-        self.assertEqual(body['results'][0]['id'], str(invites[0].id))
-        self.assertIsNotNone(body['previous'])
-        self.assertIsNone(body['next'])
-
-        # Test going back to previous page works
-        response = self.client.get(body['previous'])
-
-        body = response.json()
-        self.assertEqual(len(body['results']), 2)
-        self.assertEqual(body['results'][0]['id'], str(invites[2].id))
-        self.assertEqual(body['results'][1]['id'], str(invites[1].id))
-        self.assertIsNone(body['previous'])
-        self.assertIsNotNone(body['next'])
-
     def test_login(self):
         request = self.client.post(
             '/api/token-auth/',
@@ -218,22 +166,15 @@ class TestRatingApp(AuthenticatedAPITestCase):
         self.make_invite(
             identity="48630fb3-862d-4974-8e69-ac3ee7b0e88e")
 
-        # Execute 1st page
+        # Execute
         response = self.client.get('/api/v1/invite/',
                                    content_type='application/json')
         results = response.json()
 
-        # Check 1st page
+        # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(results["results"]), 2)
-
-        # Execute next page
-        response = self.client.get(results['next'])
-        results = response.json()
-
-        # Check next page
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(results["results"]), 1)
+        self.assertEqual(results["count"], 3)
+        self.assertEqual(len(results["results"]), 3)
 
     def test_get_invite_list_filtered(self):
         # Setup
@@ -253,6 +194,7 @@ class TestRatingApp(AuthenticatedAPITestCase):
 
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(results["count"], 1)
         self.assertEqual(len(results["results"]), 1)
 
     def test_get_invite_list_filtered_completed(self):
@@ -278,6 +220,7 @@ class TestRatingApp(AuthenticatedAPITestCase):
 
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(results["count"], 1)
         self.assertEqual(len(results["results"]), 1)
 
     def test_update_invite(self):
@@ -368,6 +311,7 @@ class TestRatingApp(AuthenticatedAPITestCase):
 
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(results["count"], 2)
         self.assertEqual(len(results["results"]), 2)
 
     def test_get_rating_list_filtered(self):
@@ -391,6 +335,7 @@ class TestRatingApp(AuthenticatedAPITestCase):
 
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(results["count"], 2)
         self.assertEqual(len(results["results"]), 2)
         self.assertEqual(Rating.objects.all().count(), 4)
 

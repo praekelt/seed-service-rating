@@ -6,16 +6,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.authtoken.models import Token
-from rest_framework.pagination import CursorPagination
 
 from .serializers import (InviteSerializer, RatingSerializer, HookSerializer,
                           CreateUserSerializer)
 from .models import Invite, Rating
 from .tasks import send_invite_messages
-
-
-class CreatedAtCursorPagination(CursorPagination):
-    ordering = "-created_at"
 
 
 class HookViewSet(viewsets.ModelViewSet):
@@ -40,7 +35,6 @@ class InviteViewSet(viewsets.ModelViewSet):
     serializer_class = InviteSerializer
     filter_fields = ('identity', 'version', 'invited', 'completed',
                      'expired', 'expires_at', 'created_at', 'updated_at')
-    pagination_class = CreatedAtCursorPagination
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user,
@@ -75,7 +69,6 @@ class RatingViewSet(viewsets.ModelViewSet):
     serializer_class = RatingSerializer
     filter_fields = ('identity', 'invite', 'version', 'question_id',
                      'created_at')
-    pagination_class = CreatedAtCursorPagination
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user,
