@@ -5,7 +5,10 @@ import datetime
 from celery.task import Task
 from celery.utils.log import get_task_logger
 from django.conf import settings
-from seed_services_client.message_sender import MessageSenderApiClient
+from seed_services_client import (
+    IdentityStoreApiClient,
+    MessageSenderApiClient,
+)
 
 from .models import Invite
 
@@ -15,22 +18,14 @@ ms_client = MessageSenderApiClient(
     auth_token=settings.MESSAGE_SENDER_TOKEN
 )
 
+identity_store_client = IdentityStoreApiClient(
+    api_url=settings.IDENTITY_STORE_URL,
+    auth_token=settings.IDENTITY_STORE_TOKEN,
+)
+
 
 def get_identity_address(identity_uuid):
-    # TODO: Move this function to seed-services-client (also in
-    #       stage-based-messaging)
-    url = "%s/%s/%s/addresses/msisdn" % (settings.IDENTITY_STORE_URL,
-                                         "identities", identity_uuid)
-    params = {"default": True}
-    headers = {
-        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
-        'Content-Type': 'application/json'
-    }
-    r = requests.get(url, params=params, headers=headers).json()
-    if len(r["results"]) > 0:
-        return r["results"][0]["address"]
-    else:
-        return None
+    return identity_store_client.get_identity_address(identity_uuid)
 
 
 class SendInviteMessages(Task):
