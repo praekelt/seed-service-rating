@@ -173,7 +173,6 @@ class TestRatingApp(AuthenticatedAPITestCase):
 
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(results["count"], 3)
         self.assertEqual(len(results["results"]), 3)
 
     def test_get_invite_list_filtered(self):
@@ -194,7 +193,6 @@ class TestRatingApp(AuthenticatedAPITestCase):
 
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(results["count"], 1)
         self.assertEqual(len(results["results"]), 1)
 
     def test_get_invite_list_filtered_completed(self):
@@ -220,7 +218,6 @@ class TestRatingApp(AuthenticatedAPITestCase):
 
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(results["count"], 1)
         self.assertEqual(len(results["results"]), 1)
 
     def test_update_invite(self):
@@ -311,7 +308,6 @@ class TestRatingApp(AuthenticatedAPITestCase):
 
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(results["count"], 2)
         self.assertEqual(len(results["results"]), 2)
 
     def test_get_rating_list_filtered(self):
@@ -335,7 +331,6 @@ class TestRatingApp(AuthenticatedAPITestCase):
 
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(results["count"], 2)
         self.assertEqual(len(results["results"]), 2)
         self.assertEqual(Rating.objects.all().count(), 4)
 
@@ -445,7 +440,6 @@ class TestRatingApp(AuthenticatedAPITestCase):
             responses.GET,
             "http://is/api/v1/identities/%s/addresses/msisdn?default=True" % invite0_uuid,  # noqa
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{"address": "+27345"}]

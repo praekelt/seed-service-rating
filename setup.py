@@ -50,7 +50,7 @@ setup(
         'django-rest-hooks==1.3.1',
         'drfdocs==0.0.11',
         'freezegun==0.3.7',
-        'seed-services-client>=0.29.0'
+        'seed-services-client>=0.31.0'
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
